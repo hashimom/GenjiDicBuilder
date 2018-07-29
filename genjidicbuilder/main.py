@@ -26,6 +26,14 @@ from . import word
     main
 '''
 def main():
-    wordobj = word.Word()
+    aparser = argparse.ArgumentParser()
+    aparser.add_argument('-n', nargs='?', help='naist-jdic.csv path (option)')
+    args = aparser.parse_args()
+
+    naistjdicpath = None
+    if args.n:
+        naistjdicpath = args.n
+
+    wordobj = word.Word(naistjdicpath)
     wordobj.regist()
 

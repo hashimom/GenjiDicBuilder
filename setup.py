@@ -24,14 +24,14 @@ import setuptools
 if __name__ == "__main__":
     setuptools.setup(
         name='genjidicbuilder',
-        version='0.0.1',
+        version='0.1.0',
         description='Dictionary builder for Genji from Kasuga corpus.',
         author='hashimom',
         author_email='hashimom@geeko.jp',
         url='https://github.com/hashimom/Kasuga',
         license='MIT',
         python_requires='>=3',
-        install_requires=['pymongo'],
+        install_requires=['pymongo', 'jaconv'],
         packages=setuptools.find_packages(),
         entry_points={
             'console_scripts': [

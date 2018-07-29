@@ -20,30 +20,78 @@
 # SOFTWARE.
 
 import subprocess
+import csv
+import jaconv
 from pymongo import MongoClient
 
 mongodbHostName = 'localhost'
 mongodbPortNo = 27017
 maxcost = 1000
 
+basickeys = [
+    "あ", "い", "う", "え", "お",
+    "か", "き", "く", "け", "こ",
+    "さ", "し", "す", "せ", "そ",
+    "た", "ち", "つ", "て", "と",
+    "な", "に", "ぬ", "ね", "の",
+    "は", "ひ", "ふ", "へ", "ほ",
+    "ま", "み", "む", "め", "も",
+    "や", "ゆ", "よ",
+    "ら", "り", "る", "れ", "ろ",
+    "わ", "を", "ん",
+    "が", "ぎ", "ぐ", "げ", "ご",
+    "ざ", "じ", "ず", "ぜ", "ぞ",
+    "だ", "ぢ", "づ", "で", "ど",
+    "ば", "び", "ぶ", "べ", "ぼ",
+    "ぱ", "ぴ", "ぷ", "ぺ", "ぽ",
+    "ぁ", "ぃ", "ぅ", "ぇ", "ぉ",
+    "ゃ", "ゅ", "ょ", "っ",
+    "１", "２", "３", "４", "５", "６", "７", "８", "９", "０",
+    "、", "。", "ー", "＋", "！", "＆", "（", "）", "｛", "｝"
+]
+
 class Word:
-    def __init__(self):
+    def __init__(self, naistjdicpath):
         client = MongoClient(mongodbHostName, mongodbPortNo)
         db = client.kasuga
         self.words = db.words
         self.phases = db.phases
 
-        # 一旦 GenjiDic のデータベースは削除して新規作成する
-        client.drop_database('genji')
         db = client.genji
         self.dic = db.dic
+        # 一旦 GenjiDic のコレクションは削除して新規作成する
+        self.dic.remove()
+        self.naistjdicpath = naistjdicpath
+
+        # naist-jdic.csv のファイルパス指定（ない場合は None にする必要がある）
+#        self.naistjdic = db.naistjdic
+#        self.naistjdicpath = naistjdicpath
+#        if naistjdicpath:
+#            self.naistjdic.remove()
+
+    def readNaistJdic(self):
+        # Naist-Jdic の読み込み
+        f = open(self.naistjdicpath, "r")
+        reader = csv.reader(f)
+        print("Naist-jdic regist START!")
+        for row in reader:
+            if row[11] != "":
+                self.dic.insert({"key": row[0], "read": jaconv.kata2hira(row[11]), "cost": maxcost, "from": "naistjdic"})
 
     def regist(self):
+        # Naist-Jdic ファイルパス指定がある場合はここで登録
+        #if self.naistjdicpath:
+        self.readNaistJdic()
+
+        # 基本語登録
+        for basickey in basickeys:
+            self.dic.insert({"key": basickey, "read": basickey, "cost": maxcost, "from": "basic"})
+
         # 単語取得
         for word in self.words.find():
             print("regist: " + word["surface"])
             # 単単語登録
-            if self.dic.find({"key": word["surface"], "read": word["read"]}).count() == 0:
+            if self.dic.find({"key": word["surface"], "read": word["read"], "from": "kasuga"}).count() == 0:
                 self.dic.insert({"key": word["surface"], "read": word["read"], "cost": maxcost})
 
                 # 文節取得
@@ -67,10 +115,7 @@ class Word:
                         phasecost = (1 - ((keycnt / yomcnt) * (phasecnt / keycnt))) * maxcost
 
                         # 文節を辞書へ登録
-                        self.dic.insert({"key": phasekey, "read": phaseyomi, "cost": int(phasecost)})
-
-            # 付属語登録
-
+                        self.dic.insert({"key": phasekey, "read": phaseyomi, "cost": int(phasecost), "from": "kasuga"})
 
         # CSV出力
         print("CSV output START!")
